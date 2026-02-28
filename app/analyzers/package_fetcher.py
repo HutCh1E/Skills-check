@@ -37,12 +37,14 @@ MAX_TOTAL_SIZE = 500_000
 ANALYZABLE_EXTENSIONS = {
     ".py", ".js", ".ts", ".jsx", ".tsx", ".sh", ".bash",
     ".yml", ".yaml", ".json", ".toml", ".cfg", ".ini",
+    ".md",
 }
 # Files to always check (regardless of extension)
 IMPORTANT_FILES = {
     "setup.py", "setup.cfg", "pyproject.toml", "package.json",
     "Makefile", "Dockerfile", ".env", "requirements.txt",
     "SKILL.md", "skill.json", "skill.yaml", "manifest.json",
+    "README.md", "README.rst",
 }
 
 
@@ -284,6 +286,12 @@ async def _fetch_from_github(org: str, repo: str, result: PackageFetchResult):
         resp = await client.get(api_url)
         if resp.status_code == 404:
             result.error = f"GitHub repository '{org}/{repo}' not found"
+            return
+        if resp.status_code == 403:
+            result.error = (
+                "GitHub API rate limit exceeded (60 requests/hour for unauthenticated).\n"
+                "Please wait a few minutes and try again."
+            )
             return
         resp.raise_for_status()
 
@@ -616,7 +624,10 @@ def _extract_archive(data: bytes, url: str, result: PackageFetchResult):
                         try:
                             content = zf.read(info.filename)
                             text = content.decode("utf-8", errors="replace")
-                            result.files[info.filename] = text
+                            # Normalize path (strip top-level dir)
+                            parts = info.filename.split("/", 1)
+                            rel_path = parts[1] if len(parts) > 1 else parts[0]
+                            result.files[rel_path] = text
                             total_collected += len(text)
                         except Exception:
                             pass
@@ -653,7 +664,10 @@ def _extract_archive(data: bytes, url: str, result: PackageFetchResult):
                             try:
                                 content = zf.read(info.filename)
                                 text = content.decode("utf-8", errors="replace")
-                                result.files[info.filename] = text
+                                # Normalize path (strip top-level dir)
+                                parts = info.filename.split("/", 1)
+                                rel_path = parts[1] if len(parts) > 1 else parts[0]
+                                result.files[rel_path] = text
                                 total_collected += len(text)
                             except Exception:
                                 pass

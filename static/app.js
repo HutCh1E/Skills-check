@@ -211,7 +211,11 @@ with open(os.path.expanduser("~/.ssh/id_rsa")) as f:
                         enable_sandbox: enableSandbox.checked,
                     }),
                 });
-                if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${(await resp.json()).detail || resp.statusText}`);
+                if (!resp.ok) {
+                    let detail = resp.statusText;
+                    try { detail = (await resp.json()).detail || detail; } catch (_) { }
+                    throw new Error(`HTTP ${resp.status}: ${detail}`);
+                }
                 renderResults(await resp.json());
             } catch (err) {
                 alert('扫描失败: ' + err.message);
