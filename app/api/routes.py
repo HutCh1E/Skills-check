@@ -216,9 +216,25 @@ async def scan_package(request: PackageScanRequest):
     )
 
     # Run analysis on combined source
+    # Determine appropriate filename extension from fetched files
+    has_python = any(
+        f.endswith(('.py', '.pyw', '.pyi'))
+        for f in fetch_result.files.keys()
+    )
+    if has_python:
+        scan_filename = f"{fetch_result.package_name}-{fetch_result.version}.py"
+    elif len(fetch_result.files) == 1:
+        # Single file — use its actual name
+        scan_filename = list(fetch_result.files.keys())[0]
+    else:
+        # Multi-file non-Python bundle — use first file's extension
+        first_file = list(fetch_result.files.keys())[0]
+        ext = first_file[first_file.rfind('.'):] if '.' in first_file else ''
+        scan_filename = f"{fetch_result.package_name}-{fetch_result.version}{ext}"
+
     scan_request = ScanRequest(
         source_code=combined_source,
-        filename=f"{fetch_result.package_name}-{fetch_result.version}",
+        filename=scan_filename,
         enable_llm=request.enable_llm,
         enable_sandbox=request.enable_sandbox,
     )
