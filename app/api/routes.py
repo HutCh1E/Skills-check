@@ -12,6 +12,7 @@ from fastapi import APIRouter, File, Form, UploadFile, HTTPException
 from app.analyzers.static_analyzer import StaticAnalyzer
 from app.analyzers.llm_analyzer import LLMAnalyzer
 from app.analyzers.sandbox_analyzer import SandboxAnalyzer
+from app.analyzers.package_fetcher import fetch_package
 from app.core.scoring import (
     calculate_risk_score,
     compute_stats,
@@ -22,6 +23,8 @@ from app.core.scoring import (
 from app.models.schemas import (
     Finding,
     HealthResponse,
+    PackageInfo,
+    PackageScanRequest,
     ScanRequest,
     ScanResult,
 )
@@ -168,6 +171,74 @@ async def scan_file(
         enable_sandbox=enable_sandbox,
     )
     return await scan_code(request)
+
+
+@router.post(
+    "/scan/package",
+    response_model=ScanResult,
+    summary="Scan a package by install command",
+)
+async def scan_package(request: PackageScanRequest):
+    """
+    Scan a package by providing an install command.
+
+    Supported formats:
+    - `pip install <package>`
+    - `pip install <package>==<version>`
+    - `npm install <package>`
+    - `npm install <package>@<version>`
+
+    The service will fetch the package source from PyPI or npm,
+    extract the source files, and run security analysis.
+    """
+    logger.info(f"Fetching package from command: {request.command}")
+
+    # Fetch package source
+    fetch_result = await fetch_package(request.command)
+
+    if fetch_result.error and not fetch_result.files:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Failed to fetch package: {fetch_result.error}",
+        )
+
+    # Combine all source files for analysis
+    combined_source = fetch_result.combined_source
+    if not combined_source.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="No analyzable source files found in the package",
+        )
+
+    logger.info(
+        f"Fetched {len(fetch_result.files)} files "
+        f"({fetch_result.total_size} bytes) from {fetch_result.package_name}"
+    )
+
+    # Run analysis on combined source
+    scan_request = ScanRequest(
+        source_code=combined_source,
+        filename=f"{fetch_result.package_name}-{fetch_result.version}",
+        enable_llm=request.enable_llm,
+        enable_sandbox=request.enable_sandbox,
+    )
+
+    result = await scan_code(scan_request)
+
+    # Attach package info
+    result.package_info = PackageInfo(
+        name=fetch_result.package_name,
+        version=fetch_result.version,
+        source=fetch_result.source,
+        metadata=fetch_result.metadata,
+        files_count=len(fetch_result.files),
+        total_size=fetch_result.total_size,
+    )
+
+    # Update the stored result
+    _scan_results[result.scan_id] = result
+
+    return result
 
 
 @router.get(

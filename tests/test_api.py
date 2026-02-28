@@ -103,5 +103,6 @@ async def test_root_endpoint():
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.get("/")
         assert response.status_code == 200
-        data = response.json()
-        assert "service" in data
+        # Root may return HTML (UI mode) or JSON (API mode)
+        content_type = response.headers.get("content-type", "")
+        assert "text/html" in content_type or "application/json" in content_type

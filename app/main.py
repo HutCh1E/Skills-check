@@ -4,14 +4,23 @@ Skills Security Check API — Main Application Entry Point
 A security analysis service for AI agent skills (plugins/extensions).
 Uses three-layer analysis: static AST scanning, Qwen 3.5 Plus LLM
 deep analysis, and Docker-based sandbox dynamic execution.
+
+Startup modes:
+    python -m app.main              # API + UI (default)
+    python -m app.main --mode api   # API only
+    python -m app.main --mode ui    # API + UI
 """
 
 from __future__ import annotations
 
+import argparse
 import logging
+import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 from app.api.routes import router
 
@@ -23,6 +32,13 @@ logging.basicConfig(
     format="%(asctime)s | %(levelname)-7s | %(name)s | %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
+logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Parse startup mode from env var (set by __main__)
+# ---------------------------------------------------------------------------
+STARTUP_MODE = os.environ.get("SKILLS_CHECK_MODE", "ui")  # "api" or "ui"
+
 
 # ---------------------------------------------------------------------------
 # Application
@@ -44,7 +60,7 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
-# CORS — allow all origins for development
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -53,27 +69,32 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount routes
+# Mount API routes
 app.include_router(router)
 
+# ---------------------------------------------------------------------------
+# UI mode: serve static files + SPA fallback
+# ---------------------------------------------------------------------------
+STATIC_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static")
 
-@app.get("/", include_in_schema=False)
-async def root():
-    """Root redirect to API docs."""
-    return {
-        "service": "Skills Security Check API",
-        "version": "1.0.0",
-        "docs": "/docs",
-    }
+if STARTUP_MODE != "api" and os.path.isdir(STATIC_DIR):
+    # Serve static assets (CSS, JS)
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
+    @app.get("/", include_in_schema=False)
+    async def serve_ui():
+        """Serve the web UI."""
+        return FileResponse(os.path.join(STATIC_DIR, "index.html"))
 
-if __name__ == "__main__":
-    import uvicorn
-    from app.core.config import settings
+    logger.info("🖥️  UI mode enabled — http://localhost:8000/")
+else:
+    @app.get("/", include_in_schema=False)
+    async def root():
+        return {
+            "service": "Skills Security Check API",
+            "version": "1.0.0",
+            "docs": "/docs",
+            "mode": "api-only",
+        }
 
-    uvicorn.run(
-        "app.main:app",
-        host=settings.api_host,
-        port=settings.api_port,
-        reload=True,
-    )
+    logger.info("🔌 API-only mode — http://localhost:8000/docs")

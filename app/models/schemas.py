@@ -114,6 +114,7 @@ class ScanResult(BaseModel):
     summary: str = Field(..., description="Human-readable summary of the analysis")
     findings: list[Finding] = Field(default_factory=list)
     stats: ScanStats = Field(default=None)
+    package_info: Optional[PackageInfo] = Field(default=None)
 
     model_config = {"ser_json_timedelta": "iso8601"}
 
@@ -128,6 +129,28 @@ class ScanStats(BaseModel):
     info_count: int = 0
     lines_analyzed: int = 0
     analyzers_used: list[str] = Field(default_factory=list)
+
+
+class PackageInfo(BaseModel):
+    """Package metadata from registry."""
+    name: str = ""
+    version: str = ""
+    source: str = ""
+    metadata: dict = Field(default_factory=dict)
+    files_count: int = 0
+    total_size: int = 0
+
+
+class PackageScanRequest(BaseModel):
+    """Request body to scan a package via install command."""
+    command: str = Field(
+        ...,
+        description="Install command, e.g. 'pip install requests' or 'npm install lodash'",
+        min_length=1,
+        max_length=500,
+    )
+    enable_llm: bool = Field(default=True, description="Enable LLM deep analysis")
+    enable_sandbox: bool = Field(default=False, description="Enable sandbox dynamic analysis")
 
 
 class HealthResponse(BaseModel):

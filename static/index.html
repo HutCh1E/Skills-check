@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skills Security Check</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+    <div class="bg-gradient"></div>
+
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <div class="logo-icon">&#x1f6e1;&#xfe0f;</div>
+                <div>
+                    <h1>Skills Security Check</h1>
+                    <p class="subtitle">AI Agent Skill 安全检测平台</p>
+                </div>
+            </div>
+            <div class="header-status" id="headerStatus">
+                <span class="status-dot"></span>
+                <span>系统就绪</span>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Left Panel: Input -->
+            <section class="panel input-panel">
+                <!-- Input Mode Tabs -->
+                <div class="input-tabs">
+                    <button class="tab active" data-tab="code" id="tabCode">
+                        &#x1f4dd; 代码输入
+                    </button>
+                    <button class="tab" data-tab="package" id="tabPackage">
+                        &#x1f4e6; 安装指令
+                    </button>
+                </div>
+
+                <!-- Tab: Code Input -->
+                <div class="tab-content active" id="tabContentCode">
+                    <div class="panel-header">
+                        <h2>粘贴 Skill 源代码</h2>
+                        <div class="panel-actions">
+                            <button class="btn btn-ghost" id="btnLoadSample" title="加载示例恶意代码">
+                                &#x26a1; 示例
+                            </button>
+                            <button class="btn btn-ghost" id="btnClear" title="清空">
+                                &#x1f5d1;&#xfe0f; 清空
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="editor-wrapper">
+                        <div class="line-numbers" id="lineNumbers">1</div>
+                        <textarea id="codeInput" class="code-editor" spellcheck="false"
+                            placeholder="粘贴或输入要检测的 Skill 源代码..."></textarea>
+                    </div>
+
+                    <!-- File Upload -->
+                    <div class="file-upload" id="fileUpload">
+                        <input type="file" id="fileInput" accept=".py,.js,.ts,.txt" hidden>
+                        <p>或拖拽文件到此处 / <a href="#" id="btnBrowse">浏览文件</a></p>
+                    </div>
+                </div>
+
+                <!-- Tab: Package Install -->
+                <div class="tab-content" id="tabContentPackage">
+                    <div class="panel-header">
+                        <h2>输入安装指令</h2>
+                        <div class="panel-actions">
+                            <button class="btn btn-ghost" id="btnSamplePip">Plugin 示例</button>
+                            <button class="btn btn-ghost" id="btnSampleNpm">GitHub 示例</button>
+                        </div>
+                    </div>
+
+                    <div class="command-input-wrapper">
+                        <div class="command-prefix">$</div>
+                        <input type="text" id="commandInput" class="command-input"
+                            placeholder="pip install some-package" spellcheck="false">
+                    </div>
+
+                    <div class="command-hints">
+                        <p class="hint-title">支持的指令格式：</p>
+                        <div class="hint-list">
+                            <code>/plugin install &lt;name&gt;@&lt;marketplace&gt;</code>
+                            <code>/plugin add &lt;org/repo&gt;</code>
+                            <code>/plugin add /path/to/skill</code>
+                            <code>pip install &lt;package&gt;</code>
+                            <code>npm install &lt;package&gt;</code>
+                            <code>org/repo</code>
+                        </div>
+                        <p class="hint-note">系统将自动从 GitHub / PyPI / npm 拉取源码并进行安全分析，也支持本地技能目录</p>
+                    </div>
+                </div>
+
+                <!-- Options (shared) -->
+                <div class="scan-options">
+                    <label class="toggle-option">
+                        <input type="checkbox" id="enableLLM" checked>
+                        <span class="toggle-slider"></span>
+                        <span class="toggle-label">&#x1f916; LLM 深度分析 <small>(Qwen 3.5 Plus)</small></span>
+                    </label>
+                    <label class="toggle-option">
+                        <input type="checkbox" id="enableSandbox">
+                        <span class="toggle-slider"></span>
+                        <span class="toggle-label">&#x1f4e6; 沙箱动态分析 <small>(需要 Docker)</small></span>
+                    </label>
+                </div>
+
+                <!-- Scan Button -->
+                <button class="btn btn-primary btn-scan" id="btnScan">
+                    <span class="btn-text">&#x1f50d; 开始安全扫描</span>
+                    <span class="btn-loading" style="display:none;">
+                        <span class="spinner"></span> 分析中...
+                    </span>
+                </button>
+            </section>
+
+            <!-- Right Panel: Results -->
+            <section class="panel results-panel" id="resultsPanel">
+                <div class="empty-state" id="emptyState">
+                    <div class="empty-icon">&#x1f512;</div>
+                    <h3>等待检测</h3>
+                    <p>在左侧输入代码或安装指令，点击"开始安全扫描"</p>
+                </div>
+
+                <div class="results-content" id="resultsContent" style="display:none;">
+                    <!-- Package Info Banner (hidden if not package scan) -->
+                    <div class="package-banner" id="packageBanner" style="display:none;">
+                        <div class="package-icon">&#x1f4e6;</div>
+                        <div class="package-details">
+                            <strong id="pkgName">-</strong>
+                            <span id="pkgMeta"></span>
+                        </div>
+                    </div>
+
+                    <!-- Score Card -->
+                    <div class="score-card" id="scoreCard">
+                        <div class="score-ring-container">
+                            <svg class="score-ring" viewBox="0 0 120 120">
+                                <circle class="score-ring-bg" cx="60" cy="60" r="52" />
+                                <circle class="score-ring-fill" id="scoreRingFill" cx="60" cy="60" r="52" />
+                            </svg>
+                            <div class="score-value" id="scoreValue">0</div>
+                        </div>
+                        <div class="score-info">
+                            <div class="risk-badge" id="riskBadge">SAFE</div>
+                            <p class="score-summary" id="scoreSummary"></p>
+                        </div>
+                    </div>
+
+                    <!-- Stats Bar -->
+                    <div class="stats-bar" id="statsBar">
+                        <div class="stat-item stat-critical">
+                            <span class="stat-count" id="statCritical">0</span>
+                            <span class="stat-label">严重</span>
+                        </div>
+                        <div class="stat-item stat-high">
+                            <span class="stat-count" id="statHigh">0</span>
+                            <span class="stat-label">高危</span>
+                        </div>
+                        <div class="stat-item stat-medium">
+                            <span class="stat-count" id="statMedium">0</span>
+                            <span class="stat-label">中危</span>
+                        </div>
+                        <div class="stat-item stat-low">
+                            <span class="stat-count" id="statLow">0</span>
+                            <span class="stat-label">低危</span>
+                        </div>
+                        <div class="stat-item stat-info">
+                            <span class="stat-count" id="statInfo">0</span>
+                            <span class="stat-label">信息</span>
+                        </div>
+                    </div>
+
+                    <!-- Findings List -->
+                    <div class="findings-header">
+                        <h3>&#x1f50e; 检测结果</h3>
+                        <span class="findings-count" id="findingsCount">0 个发现</span>
+                    </div>
+                    <div class="findings-list" id="findingsList"></div>
+
+                    <div class="scan-meta" id="scanMeta"></div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+
+</html>
