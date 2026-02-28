@@ -197,6 +197,30 @@ with open(os.path.expanduser("~/.ssh/id_rsa")) as f:
     async function scanCode() {
         const code = codeInput.value.trim();
         if (!code) return;
+
+        // Auto-detect: if the input looks like a URL or install command, use package scan
+        if (_looksLikeCommand(code)) {
+            setLoading(true);
+            try {
+                const resp = await fetch('/api/v1/scan/package', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        command: code,
+                        enable_llm: enableLLM.checked,
+                        enable_sandbox: enableSandbox.checked,
+                    }),
+                });
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${(await resp.json()).detail || resp.statusText}`);
+                renderResults(await resp.json());
+            } catch (err) {
+                alert('扫描失败: ' + err.message);
+            } finally {
+                setLoading(false);
+            }
+            return;
+        }
+
         setLoading(true);
         try {
             const resp = await fetch('/api/v1/scan', {
@@ -215,6 +239,20 @@ with open(os.path.expanduser("~/.ssh/id_rsa")) as f:
         } finally {
             setLoading(false);
         }
+    }
+
+    function _looksLikeCommand(text) {
+        const t = text.trim();
+        // Single line only (multi-line is definitely code)
+        if (t.includes('\n')) return false;
+        return (
+            /^https?:\/\/github\.com\//i.test(t) ||
+            /^\/?plugin\s+(install|add|marketplace)/i.test(t) ||
+            /^(pip3?|python\s+-m\s+pip)\s+install\s+/i.test(t) ||
+            /^(npm|yarn|pnpm)\s+(install|add)\s+/i.test(t) ||
+            /^git\s+clone\s+/i.test(t) ||
+            /^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+$/.test(t)
+        );
     }
 
     async function scanPackage() {
