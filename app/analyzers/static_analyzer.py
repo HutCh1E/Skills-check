@@ -79,10 +79,14 @@ class StaticAnalyzer:
     def __init__(self):
         self.findings: list[Finding] = []
 
-    def analyze(self, source_code: str) -> list[Finding]:
+    def analyze(self, source_code: str, filename: str = None) -> list[Finding]:
         """Run all static checks and return findings."""
         self.findings = []
         self._check_string_patterns(source_code)
+
+        # Skip AST parsing for non-Python files
+        if not self._is_python_content(source_code, filename):
+            return self.findings
 
         try:
             tree = ast.parse(source_code)
@@ -99,6 +103,56 @@ class StaticAnalyzer:
 
         self._walk_ast(tree, source_code)
         return self.findings
+
+    @staticmethod
+    def _is_python_content(source_code: str, filename: str = None) -> bool:
+        """Detect if the source is Python code (vs Markdown, JSON, YAML, etc.)."""
+        # Check by filename extension
+        if filename:
+            fname = filename.lower()
+            py_exts = ('.py', '.pyw', '.pyi')
+            non_py_exts = (
+                '.md', '.json', '.yaml', '.yml', '.toml', '.cfg', '.ini',
+                '.txt', '.rst', '.html', '.css', '.xml', '.sh', '.bash',
+                '.js', '.ts', '.jsx', '.tsx',
+            )
+            if any(fname.endswith(ext) for ext in py_exts):
+                return True
+            if any(fname.endswith(ext) for ext in non_py_exts):
+                return False
+
+        # Heuristic: check first non-blank lines
+        lines = [l.strip() for l in source_code.splitlines() if l.strip()][:20]
+        if not lines:
+            return False
+
+        first = lines[0]
+        # Markdown indicators
+        if first.startswith('#') and not first.startswith('#!'):
+            # Could be Markdown heading or Python comment
+            # Check if multiple lines start with # in heading style
+            md_headings = sum(1 for l in lines if re.match(r'^#{1,6}\s', l))
+            if md_headings >= 2:
+                return False
+        # JSON
+        if first.startswith('{') or first.startswith('['):
+            return False
+        # YAML frontmatter
+        if first == '---':
+            return False
+        # HTML/XML
+        if first.startswith('<!') or first.startswith('<html') or first.startswith('<?xml'):
+            return False
+
+        # Multi-file combined source from package fetcher
+        # Contains "# ===== FILE: *.md =====" headers → mixed content, try to parse
+        # but don't fail on syntax errors for non-Python sections
+        if '# ===== FILE:' in source_code:
+            # Check if ANY file in the bundle is Python
+            has_python = bool(re.search(r'# ===== FILE: .*\.py[wi]?\s*=====', source_code))
+            return has_python
+
+        return True
 
     # ------------------------------------------------------------------
     # String-level pattern checks (before AST parsing)

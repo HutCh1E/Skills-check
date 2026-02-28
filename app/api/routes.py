@@ -90,7 +90,7 @@ async def scan_code(request: ScanRequest):
     # --- Layer 1: Static analysis (always runs) ---
     logger.info("Running static analysis...")
     static = _get_static_analyzer()
-    static_findings = static.analyze(request.source_code)
+    static_findings = static.analyze(request.source_code, request.filename)
     all_findings.extend(static_findings)
     analyzers_used.append("static")
     logger.info(f"Static analysis found {len(static_findings)} issue(s).")
