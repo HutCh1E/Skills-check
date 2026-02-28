@@ -1,0 +1,18 @@
+# Minimal sandbox image for dynamic skill analysis
+FROM python:3.11-slim
+
+# Remove unnecessary tools
+RUN apt-get purge -y --auto-remove \
+    && rm -rf /var/lib/apt/lists/* /usr/share/doc /usr/share/man
+
+# Create non-root user
+RUN useradd --no-create-home --shell /bin/false sandbox
+
+# Set working directory
+WORKDIR /workspace
+
+# Switch to non-root user
+USER sandbox
+
+# Default command
+CMD ["python", "--version"]
