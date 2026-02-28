@@ -121,6 +121,11 @@ class StaticAnalyzer:
             if any(fname.endswith(ext) for ext in non_py_exts):
                 return False
 
+        # Multi-file combined source from package fetcher — check FIRST
+        if '# ===== FILE:' in source_code:
+            has_python = bool(re.search(r'# ===== FILE: .*\.py[wi]?\s*=====', source_code))
+            return has_python
+
         # Heuristic: check first non-blank lines
         lines = [l.strip() for l in source_code.splitlines() if l.strip()][:20]
         if not lines:
@@ -129,8 +134,6 @@ class StaticAnalyzer:
         first = lines[0]
         # Markdown indicators
         if first.startswith('#') and not first.startswith('#!'):
-            # Could be Markdown heading or Python comment
-            # Check if multiple lines start with # in heading style
             md_headings = sum(1 for l in lines if re.match(r'^#{1,6}\s', l))
             if md_headings >= 2:
                 return False
@@ -143,14 +146,6 @@ class StaticAnalyzer:
         # HTML/XML
         if first.startswith('<!') or first.startswith('<html') or first.startswith('<?xml'):
             return False
-
-        # Multi-file combined source from package fetcher
-        # Contains "# ===== FILE: *.md =====" headers → mixed content, try to parse
-        # but don't fail on syntax errors for non-Python sections
-        if '# ===== FILE:' in source_code:
-            # Check if ANY file in the bundle is Python
-            has_python = bool(re.search(r'# ===== FILE: .*\.py[wi]?\s*=====', source_code))
-            return has_python
 
         return True
 
