@@ -56,6 +56,11 @@ class SandboxAnalyzer:
             logger.info("Sandbox analyzer not available, skipping.")
             return []
 
+        # Skip non-Python files (Markdown, JSON, YAML, etc.)
+        if filename and not self._is_executable(filename):
+            logger.info(f"Skipping sandbox for non-Python file: {filename}")
+            return []
+
         findings: list[Finding] = []
         container = None
         tmp_dir = None
@@ -271,3 +276,17 @@ print(json.dumps({{
                 ))
 
         return findings
+
+    @staticmethod
+    def _is_executable(filename: str) -> bool:
+        """Check if the file is executable Python code."""
+        if not filename:
+            return True
+        fname = filename.lower()
+        # Only execute Python files
+        if any(fname.endswith(ext) for ext in ('.py', '.pyw', '.pyi')):
+            return True
+        # Multi-file package scans have synthetic filenames like "requests-2.31.0"
+        if '.' not in fname.split('/')[-1].split('\\')[-1]:
+            return True
+        return False

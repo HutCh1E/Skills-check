@@ -1,5 +1,5 @@
 # Minimal sandbox image for dynamic skill analysis
-FROM python:3.11-slim
+FROM docker.1ms.run/library/python:3.11-slim
 
 # Remove unnecessary tools
 RUN apt-get purge -y --auto-remove \
